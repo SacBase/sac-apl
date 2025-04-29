@@ -24,23 +24,6 @@ inline typ[i:ishp] sel(int[o] idx, typ[o:_,i:ishp] arr)                        \
 
 BUILT_IN(SEL_VxA)
 
-#define WHERE_AxA(typ, zero)                                                   \
-inline                                                                         \
-typ[d:shp] where(bool[d:shp] p, typ[d:shp] A, typ[d:shp] B)                    \
-{                                                                              \
-    return { iv -> _sel_VxA_(iv, p) ? _sel_VxA_(iv, A) : _sel_VxA_(iv, B) };   \
-}
-
-#define WHERE_AxS(typ, zero)                                                   \
-inline                                                                         \
-typ[d:shp] where(bool[d:shp] p, typ[d:shp] A, typ B)                           \
-{                                                                              \
-    return { iv -> _sel_VxA_(iv, p) ? _sel_VxA_(iv, A) : B };                  \
-}
-
-BUILT_IN(WHERE_AxA)
-BUILT_IN(WHERE_AxS)
-
 /******************************************************************************
  *
  * @fn <a>[o:sv,i:ishp] take_apl(int[o] sv, <a>[o:oshp,i:ishp] A)
@@ -71,15 +54,16 @@ BUILT_IN(WHERE_AxS)
 inline typ[o:sv,i:ishp] take_apl(int[o] sv, typ[o:oshp,i:ishp] A)              \
 {                                                                              \
     /* Offset shows the index of the first element to be selected. */          \
-    offset = where(_lt_VxS_(sv, 0),                                            \
-                   _add_VxV_(oshp, sv),                                        \
-                   0);                                                         \
+    offset = { [i] -> _lt_SxS_(_sel_VxA_([i], sv), 0)                          \
+                        ? _add_SxS_(_sel_VxA_([i], sv), _sel_VxA_([i], oshp))  \
+                        : 0 };                                                 \
     /* Stop signals the location of the last index element of array.           \
      * This can be longer than the size of the array, in case offset           \
      * is less than (-oshp). */                                                \
-    stop = where(_lt_VxS_(sv, 0),                                              \
-                 _abs_V_(sv),                                                  \
-                 _min_VxV_(_abs_V_(sv), oshp));                                \
+    stop = { [i] -> _lt_SxS_(_sel_VxA_([i], sv), 0)                            \
+                        ? _abs_S_(_sel_VxA_([i], sv))                          \
+                        : _min_SxS_(_abs_S_(_sel_VxA_([i], sv)),               \
+                                    _sel_VxA_([i], oshp)) };                   \
     /* Start shows where the selection of array elements starts.               \
      * This can only be different from offset if offset < (-oshp). */          \
     start = _max_VxS_(_neg_V_(offset), 0);                                     \
