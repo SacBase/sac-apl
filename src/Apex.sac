@@ -1,6 +1,6 @@
 module Apex;
 
-export all;
+export { match };
 
 #define BUILT_IN(fun)                                                          \
 fun(int)                                                                       \
@@ -9,6 +9,11 @@ fun(float)                                                                     \
 fun(double)                                                                    \
 fun(bool)                                                                      \
 fun(char)
+
+inline bool &(bool a, bool b)
+{
+    return _and_SxS_(a, b);
+}
 
 #define MATCH_SxS(typ)                                                         \
 inline bool match(typ a, typ b)                                                \
@@ -28,7 +33,7 @@ inline bool match(typ[+] a, typ b)                                             \
     return false;                                                              \
 }
 
-#define MATCH_AxA(typ)                                    \
+#define MATCH_AxA(typ)                                                         \
 inline bool match(typ[d1:shp1] a, typ[d2:shp2] b)                              \
 {                                                                              \
     return _and_SxS_(_eq_SxS_(d1, d2),                                         \
@@ -38,11 +43,6 @@ inline bool match(typ[d1:shp1] a, typ[d2:shp2] b)                              \
                             : _eq_SxS_(_sel_VxA_(iv, a), _sel_VxA_(iv, b));    \
                      } : foldfix(&, true, false)                               \
                     ));                                                        \
-}
-
-inline bool &(bool a, bool b)
-{
-    return _and_SxS_(a, b);
 }
 
 #define MATCH(typ)                                                             \

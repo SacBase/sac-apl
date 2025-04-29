@@ -6,6 +6,7 @@ ADD_CUSTOM_TARGET (${TARGET}-all-modules ALL)
 # SaC files
 SET (SAC_SRC
     Apex.sac
+    AplTransform.sac
 )
 
 # Make a directory for sac2c output
