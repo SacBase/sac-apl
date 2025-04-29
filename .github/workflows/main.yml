@@ -1,4 +1,4 @@
-name: Build
+name: Build On Changes
 
 on: [push, pull_request]
 
@@ -6,43 +6,42 @@ env:
   BASE_URL: https://gitlab.sac-home.org/sac-group/sac-packages/-/raw/master/latest/weekly
 
 jobs:
-  build_linux:
-    runs-on: ubuntu-20.04
+  build-ubuntu22:
+    runs-on: ubuntu-22.04
     steps:
       - name: Get HEAD and submodules
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
           submodules: 'recursive'
-      - name: Create build dir
-        run: |
-          cmake -E make_directory ${{runner.workspace}}/build
-          mkdir $HOME/.sac2crc
       - name: Install sac2c-basic
         run: |
-          wget ${BASE_URL}/Ubl20/sac2c-basic.deb
+          wget ${BASE_URL}/Ubl22/sac2c-basic.deb
           sudo apt install ./sac2c-basic.deb
           sac2c -V
       - name: Install stdlib-basic
         run: |
-          wget ${BASE_URL}/Ubl20/stdlib-basic.deb
+          wget ${BASE_URL}/Ubl22/stdlib-basic.deb
           sudo apt install ./stdlib-basic.deb
-          ls $HOME/.sac2crc
+      - name: Create build dir
+        run: |
+          cmake -E make_directory ${{runner.workspace}}/build
+          mkdir $HOME/.sac2crc
       - name: Configure build-system
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE
+        run: cmake -DFULLTYPES=ON $GITHUB_WORKSPACE
       - name: Build
         shell: bash
         working-directory: ${{runner.workspace}}/build
         run: |
-          cmake --build . -j 2 2>&1 | tee build.log
+          cmake --build . -j 4 2>&1 | tee build.log
           if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "Error detected in build";
+            echo "!!! ERROR detected in build !!!";
             exit 1;
           fi
-          ${GITHUB_WORKSPACE}/ci/fail-on-warning.sh build.log
-  build_mac:
+
+  build-macos-x86:
     runs-on: macos-13
     steps:
       - name: Get HEAD and submodules
@@ -50,10 +49,6 @@ jobs:
         with:
           fetch-depth: 0
           submodules: 'recursive'
-      - name: Create build dir
-        run: |
-          cmake -E make_directory ${{runner.workspace}}/build
-          mkdir $HOME/.sac2crc
       - name: Install sac2c-basic
         run: |
           wget ${BASE_URL}/MacOS_x86/sac2c-basic.pkg
@@ -63,23 +58,63 @@ jobs:
         run: |
           wget ${BASE_URL}/MacOS_x86/stdlib-basic.pkg
           sudo installer -pkg ./stdlib-basic.pkg -target /
-          ls $HOME/.sac2crc
-      - name: Set XCode version
+      - name: Create build dir
         run: |
-          sudo xcode-select -switch "/Applications/Xcode_14.1.0.app"
-          # we need to rewrite sysroot path to use specific Xcode version
-          sudo find /usr/local/share -type f -name 'sac2crc_*' -execdir sed -i.bak 's/Xcode\.app/Xcode_13\.4\.app/g' {} \;
+          cmake -E make_directory ${{runner.workspace}}/build
+          mkdir $HOME/.sac2crc
+      - name: Set XCode version
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '14.2'
       - name: Configure build-system
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake ${GITHUB_WORKSPACE}
+        run: cmake -DFULLTYPES=ON ${GITHUB_WORKSPACE}
       - name: Build
         shell: bash
         working-directory: ${{runner.workspace}}/build
         run: |
-          cmake --build . -j 2 2>&1 | tee build.log
+          cmake --build . -j 4 2>&1 | tee build.log
           if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "Error detected in build";
+            echo "!!! ERROR detected in build !!!";
             exit 1;
           fi
-          ${GITHUB_WORKSPACE}/ci/fail-on-warning.sh build.log
+
+  build-macos-arm:
+    runs-on: macos-15
+    steps:
+      - name: Get HEAD and submodules
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          submodules: 'recursive'
+      - name: Install sac2c-basic
+        run: |
+          wget ${BASE_URL}/MacOS_arm64/sac2c-basic.pkg
+          sudo installer -pkg ./sac2c-basic.pkg -target /
+          sac2c -V
+      - name: Install stdlib-basic
+        run: |
+          wget ${BASE_URL}/MacOS_arm64/stdlib-basic.pkg
+          sudo installer -pkg ./stdlib-basic.pkg -target /
+      - name: Create build dir
+        run: |
+          cmake -E make_directory ${{runner.workspace}}/build
+          mkdir $HOME/.sac2crc
+      - name: Set XCode version
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.2'
+      - name: Configure build-system
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: cmake -DFULLTYPES=ON ${GITHUB_WORKSPACE}
+      - name: Build
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . -j 3 2>&1 | tee build.log
+          if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            echo "!!! ERROR detected in build !!!";
+            exit 1;
+          fi
